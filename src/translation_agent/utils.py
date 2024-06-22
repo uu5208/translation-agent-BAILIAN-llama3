@@ -2,15 +2,16 @@ import os
 from typing import List
 from typing import Union
 
-import openai
+# import openai
 import tiktoken
+import dashscope
 from dotenv import load_dotenv
 from icecream import ic
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 load_dotenv()  # read local .env file
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 MAX_TOKENS_PER_CHUNK = (
     1000  # if text is more than this many tokens, we'll break it up into
@@ -21,7 +22,7 @@ MAX_TOKENS_PER_CHUNK = (
 def get_completion(
     prompt: str,
     system_message: str = "You are a helpful assistant.",
-    model: str = "gpt-4-turbo",
+    model: str = "llama3-70b-instruct",
     temperature: float = 0.3,
     json_mode: bool = False,
 ) -> Union[str, dict]:
@@ -46,20 +47,27 @@ def get_completion(
     """
 
     if json_mode:
-        response = client.chat.completions.create(
-            model=model,
-            temperature=temperature,
-            top_p=1,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": prompt},
-            ],
+        response = dashscope.Generation.call(
+        model='llama3-70b-instruct',
+        messages=prompt,
+        result_format={"type": "json_object"},  # set the result to be "message" format.
         )
-        return response.choices[0].message.content
+        # response = client.chat.completions.create(
+        #     model=model,
+        #     temperature=temperature,
+        #     top_p=1,
+        #     response_format={"type": "json_object"},
+        #     messages=[
+        #         {"role": "system", "content": system_message},
+        #         {"role": "user", "content": prompt},
+        #     ],
+        # )
+        print(response.output.text)
+        # return response.choices[0].message.content
+        return response.output.text
     else:
-        response = client.chat.completions.create(
-            model=model,
+        response = dashscope.Generation.call(
+            model='llama3-70b-instruct',
             temperature=temperature,
             top_p=1,
             messages=[
@@ -67,7 +75,10 @@ def get_completion(
                 {"role": "user", "content": prompt},
             ],
         )
-        return response.choices[0].message.content
+        # print(response.output)
+        # return response.choices[0].message.content
+        print(response.output.text)
+        return response.output.text
 
 
 def one_chunk_initial_translation(
@@ -673,7 +684,7 @@ def translate(
         ic(token_size)
 
         text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-            model_name="gpt-4",
+            model_name="llama3",
             chunk_size=token_size,
             chunk_overlap=0,
         )
